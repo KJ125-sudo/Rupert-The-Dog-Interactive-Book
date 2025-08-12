@@ -1,5 +1,5 @@
 // ===== CONFIG =====
-const TOTAL_PAGES = 13;             // update when you add more
+const TOTAL_PAGES = 67;             // update when you add more
 const IMAGE_DIR = 'images';
 const AUDIO_DIR = 'audio';
 const FILE_PREFIX = 'Page-';         // capital P for BOTH images & audio
