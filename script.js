@@ -5,6 +5,7 @@ const AUDIO_DIR = 'audio';
 const FILE_PREFIX = 'Page-';         // capital P for BOTH images & audio
 const IMAGE_EXT = 'png';
 const AUDIO_EXT = 'mp3';
+const IMAGE_TIMEOUT_MS = 4000;       // fallback to hide loader if slow/broken
 
 // ===== HELPERS =====
 const imgSrc   = n => `${IMAGE_DIR}/${FILE_PREFIX}${n}.${IMAGE_EXT}`;
@@ -26,7 +27,6 @@ const elAudio = $('#narration');
 const elPageNum = $('#page-num');
 const elPageTotal = $('#page-total');
 const elBar = $('#bar');
-
 const btnStartAuto = $('#start-auto');
 const btnStartManual = $('#start-manual');
 const btnPrev = $('#prev');
@@ -36,7 +36,6 @@ const btnMode = $('#mode-toggle');
 const btnMute = $('#mute-toggle');
 const btnPlayPause = $('#playpause');
 
-// ===== INIT =====
 elPageTotal.textContent = TOTAL_PAGES;
 
 // Preload cover + first few pages
@@ -51,13 +50,34 @@ function setProgress(n){
   elBar.style.width = `${pct}%`;
 }
 
-function showLoader(show=true){
-  elLoader.classList.toggle('hidden', !show);
-}
+function showLoader(show=true){ elLoader.classList.toggle('hidden', !show); }
 
 function fadeInImage(){
   elImg.classList.remove('show'); // reset
   requestAnimationFrame(()=> requestAnimationFrame(()=> elImg.classList.add('show')));
+}
+
+function toast(msg){
+  // simple non-blocking notice
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.position = 'fixed';
+    t.style.left = '50%';
+    t.style.bottom = '20px';
+    t.style.transform = 'translateX(-50%)';
+    t.style.background = 'rgba(0,0,0,.75)';
+    t.style.color = '#fff';
+    t.style.padding = '10px 14px';
+    t.style.borderRadius = '10px';
+    t.style.fontWeight = '600';
+    t.style.zIndex = '99999';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  setTimeout(() => { t.style.opacity = '0'; }, 2500);
 }
 
 function loadPage(n, opts={ play:false }){
@@ -65,26 +85,49 @@ function loadPage(n, opts={ play:false }){
   elPageNum.textContent = page;
   setProgress(page);
 
-  // display loader briefly while switching heavy assets
   showLoader(true);
-  elImg.src = imgSrc(page);
-  elImg.onload = () => {
-    showLoader(false);
-    fadeInImage();
-  };
 
-  // prepare audio (if file exists)
+  // clear old handlers
+  elImg.onload = null;
+  elImg.onerror = null;
+
+  // set new src + handlers
+  const src = imgSrc(page);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    showLoader(false);
+    toast(`Image slow/missing for Page ${page}. Check: ${src}`);
+    // still try to fade whatever is there
+    fadeInImage();
+  }, IMAGE_TIMEOUT_MS);
+
+  elImg.onload = () => {
+    if (!timedOut) {
+      clearTimeout(timer);
+      showLoader(false);
+      fadeInImage();
+    }
+  };
+  elImg.onerror = () => {
+    clearTimeout(timer);
+    showLoader(false);
+    toast(`Could not load image for Page ${page}. Check filename/path/case.`);
+  };
+  elImg.src = src;
+
+  // audio
   elAudio.src = audioSrc(page);
   elAudio.load();
   elAudio.muted = muted;
 
-  // warm preload of next image & audio
+  // warm preload next image
   if (page < TOTAL_PAGES) {
     const im = new Image(); im.src = imgSrc(page+1);
   }
 
   if (opts.play) {
-    elAudio.play().catch(()=>{});
+    elAudio.play().catch(()=>{ /* user gesture needed or missing audio */ });
   }
 }
 
@@ -107,10 +150,9 @@ function startReader(initialMode){
   loadPage(1, { play: initialMode==='auto' });
 }
 
-// ===== EVENTS =====
+// Events
 btnStartAuto.addEventListener('click', ()=> startReader('auto'));
 btnStartManual.addEventListener('click', ()=> startReader('manual'));
-
 btnNext.addEventListener('click', ()=> nextPage({ play: mode==='auto' }));
 btnPrev.addEventListener('click', ()=> prevPage({ play: mode==='auto' }));
 btnRestart.addEventListener('click', ()=> loadPage(1, { play: mode==='auto' }));
@@ -133,19 +175,19 @@ btnPlayPause.addEventListener('click', ()=>{
   else { elAudio.pause(); btnPlayPause.textContent='Play'; }
 });
 
-// auto-advance when narration ends
+// Auto-advance when narration ends
 elAudio.addEventListener('ended', ()=>{
   if (mode==='auto') nextPage({ play:true });
 });
 
-// keyboard nav
+// Keyboard nav
 window.addEventListener('keydown', (e)=>{
   if (elReader.classList.contains('hidden')) return;
   if (e.key==='ArrowRight') nextPage({ play: mode==='auto' });
   if (e.key==='ArrowLeft')  prevPage({ play: mode==='auto' });
 });
 
-// tap to advance + swipe
+// Tap to advance + swipe
 elImg.addEventListener('click', ()=> nextPage({ play: mode==='auto' }));
 elImg.addEventListener('touchstart', e=> { touchStartX = e.changedTouches[0].clientX; }, {passive:true});
 elImg.addEventListener('touchend', e=>{
