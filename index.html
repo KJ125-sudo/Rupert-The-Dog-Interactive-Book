@@ -8,39 +8,58 @@
   <meta name="color-scheme" content="light only" />
 </head>
 <body>
+  <!-- Loader -->
+  <div id="loader" class="loader hidden">
+    <div class="spinner"></div>
+    <div class="load-text">Loading…</div>
+  </div>
+
   <main class="app">
-    <!-- Mode picker -->
-    <section id="mode-picker" class="card">
-      <h1>How would you like to read?</h1>
-      <div class="buttons">
-        <button id="start-auto" class="btn">Auto (narrated)</button>
-        <button id="start-manual" class="btn btn-outline">Read it myself</button>
+    <!-- COVER / START -->
+    <section id="cover" class="card cover">
+      <div class="cover-head">
+        <img src="images/logo.png" alt="" class="logo" onerror="this.style.display='none'">
       </div>
-      <p class="hint">Note: audio starts only after you click (browser policy).</p>
+      <div class="cover-art">
+        <img src="images/Cover-Page.png" alt="Cover page" class="cover-img">
+      </div>
+      <div class="cover-actions">
+        <h1>How would you like to read?</h1>
+        <div class="buttons">
+          <button id="start-auto" class="btn btn-brand">Auto (narrated)</button>
+          <button id="start-manual" class="btn btn-outline">Read it myself</button>
+        </div>
+        <p class="hint">Audio starts after you click (browser policy).</p>
+      </div>
     </section>
 
-    <!-- Reader -->
+    <!-- READER -->
     <section id="reader" class="reader hidden">
+      <div class="progressbar"><div id="bar" class="bar"></div></div>
+
       <header class="topbar">
-        <div class="progress">Page <span id="page-num">1</span>/<span id="page-total">--</span></div>
+        <div class="left">
+          <img src="images/logo.png" alt="" class="logo small" onerror="this.style.display='none'">
+          <div class="progress">Page <span id="page-num">1</span>/<span id="page-total">--</span></div>
+        </div>
         <div class="controls">
-          <button id="mode-toggle" class="btn small">Switch to Manual</button>
-          <button id="mute-toggle" class="btn small">Mute</button>
+          <button id="mode-toggle" class="btn pill">Switch to Manual</button>
+          <button id="mute-toggle" class="btn pill">Mute</button>
         </div>
       </header>
 
       <div class="page-wrap">
         <button id="prev" class="nav prev" aria-label="Previous page">‹</button>
-        <img id="page-img" alt="Book page" />
+        <img id="page-img" alt="Book page" class="fade" />
         <button id="next" class="nav next" aria-label="Next page">›</button>
       </div>
 
       <footer class="bottombar">
         <div class="left">
-          <button id="restart" class="btn small">Restart</button>
+          <button id="restart" class="btn pill">Restart</button>
         </div>
         <div class="right">
-          <button id="playpause" class="btn small">Play</button>
+          <button id="playpause" class="btn pill">Play</button>
         </div>
       </footer>
 
