@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Interactive Book</title>
+  <link rel="stylesheet" href="style.css" />
+  <meta name="color-scheme" content="light only" />
+</head>
+<body>
+  <main class="app">
+    <!-- Mode picker -->
+    <section id="mode-picker" class="card">
+      <h1>How would you like to read?</h1>
+      <div class="buttons">
+        <button id="start-auto" class="btn">Auto (narrated)</button>
+        <button id="start-manual" class="btn btn-outline">Read it myself</button>
+      </div>
+      <p class="hint">Note: audio starts only after you click (browser policy).</p>
+    </section>
+
+    <!-- Reader -->
+    <section id="reader" class="reader hidden">
+      <header class="topbar">
+        <div class="progress">Page <span id="page-num">1</span>/<span id="page-total">--</span></div>
+        <div class="controls">
+          <button id="mode-toggle" class="btn small">Switch to Manual</button>
+          <button id="mute-toggle" class="btn small">Mute</button>
+        </div>
+      </header>
+
+      <div class="page-wrap">
+        <button id="prev" class="nav prev" aria-label="Previous page">‹</button>
+        <img id="page-img" alt="Book page" />
+        <button id="next" class="nav next" aria-label="Next page">›</button>
+      </div>
+
+      <footer class="bottombar">
+        <div class="left">
+          <button id="restart" class="btn small">Restart</button>
+        </div>
+        <div class="right">
+          <button id="playpause" class="btn small">Play</button>
+        </div>
+      </footer>
+
+      <audio id="narration" preload="auto"></audio>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
