@@ -1,84 +1,151 @@
-:root{
-  --brand1:#f4ca44; /* gold */
-  --brand2:#59b379; /* green */
-  --bg:#f7f7f9;
-  --ink:#1c1d21;
-  --muted:#6b7280;
-  --card:#ffffff;
-  --shadow:0 10px 30px rgba(0,0,0,.08);
-  --radius:18px;
+// ===== CONFIG =====
+const TOTAL_PAGES = 67;             // update when you add more
+const IMAGE_DIR = 'images';
+const AUDIO_DIR = 'audio';
+const FILE_PREFIX = 'Page-';         // capital P for BOTH images & audio
+const IMAGE_EXT = 'png';
+const AUDIO_EXT = 'mp3';
+
+// ===== HELPERS =====
+const imgSrc   = n => `${IMAGE_DIR}/${FILE_PREFIX}${n}.${IMAGE_EXT}`;
+const audioSrc = n => `${AUDIO_DIR}/${FILE_PREFIX}${n}.${AUDIO_EXT}`;
+const $ = s => document.querySelector(s);
+
+// ===== STATE =====
+let mode = 'manual';   // 'manual' | 'auto'
+let page = 1;
+let muted = false;
+let touchStartX = 0;
+
+// ===== EL =====
+const elCover = $('#cover');
+const elReader = $('#reader');
+const elImg = $('#page-img');
+const elAudio = $('#narration');
+const elPageNum = $('#page-num');
+const elPageTotal = $('#page-total');
+const elBar = $('#bar');
+
+const btnStartAuto = $('#start-auto');
+const btnStartManual = $('#start-manual');
+const btnPrev = $('#prev');
+const btnNext = $('#next');
+const btnRestart = $('#restart');
+const btnMode = $('#mode-toggle');
+const btnMute = $('#mute-toggle');
+const btnPlayPause = $('#playpause');
+
+// ===== INIT =====
+elPageTotal.textContent = TOTAL_PAGES;
+
+// Preload cover + first few pages (no blocking loader)
+(function preload() {
+  const list = [imgSrc(1), 'images/Cover-Page.png'];
+  for (let i = 2; i <= Math.min(5, TOTAL_PAGES); i++) list.push(imgSrc(i));
+  list.forEach(src => { const im = new Image(); im.src = src; });
+})();
+
+function setProgress(n){
+  const pct = Math.max(0, Math.min(100, (n-1)/(TOTAL_PAGES-1)*100));
+  elBar.style.width = `${pct}%`;
 }
 
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0;background:var(--bg);color:var(--ink);
-  font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-  display:grid;place-items:center
+function fadeInImage(){
+  elImg.classList.remove('show'); // reset
+  requestAnimationFrame(()=> requestAnimationFrame(()=> elImg.classList.add('show')));
 }
 
-.app{width:min(980px,100%);padding:16px}
+function loadPage(n, opts={ play:false }){
+  page = Math.max(1, Math.min(TOTAL_PAGES, n));
+  elPageNum.textContent = page;
+  setProgress(page);
 
-.card{
-  background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
-  padding:24px
+  elImg.onload = () => fadeInImage();
+  elImg.onerror = () => {
+    // Don’t block; just keep the old image if a page is missing
+    console.warn(`Missing image for Page ${page}: ${imgSrc(page)}`);
+  };
+  elImg.src = imgSrc(page);
+
+  // audio
+  elAudio.src = audioSrc(page);
+  elAudio.load();
+  elAudio.muted = muted;
+
+  // warm preload next image
+  if (page < TOTAL_PAGES) {
+    const im = new Image(); im.src = imgSrc(page+1);
+  }
+
+  if (opts.play) {
+    elAudio.play().catch(()=>{ /* user gesture needed or missing audio */ });
+  }
 }
-h1{margin:0 0 12px;font-size:clamp(20px,2.6vw,28px)}
-.hint{color:var(--muted);margin-top:8px}
 
-.logo{height:48px}
-.logo.small{height:28px}
-.cover{display:grid;gap:16px}
-.cover-head{display:flex;justify-content:center}
-.cover-art{display:grid;place-items:center}
-.cover-img{
-  width:100%;height:auto;max-width:900px;aspect-ratio:5/4;object-fit:contain;border-radius:12px;background:#fff
+function nextPage(opts={ play: mode==='auto' }){
+  if (page < TOTAL_PAGES) loadPage(page+1, opts);
+  else if (mode==='auto') btnPlayPause.textContent = 'Play';
 }
-.cover-actions{text-align:center}
-.buttons{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+function prevPage(opts={ play:false }){ if (page>1) loadPage(page-1, opts); }
 
-.btn{
-  appearance:none;border:none;cursor:pointer;
-  padding:12px 18px;border-radius:12px;font-weight:700;box-shadow:var(--shadow);
-  background:#fff;color:var(--ink);border:2px solid transparent
+function setMode(next){
+  mode = next;
+  btnMode.textContent = mode==='auto' ? 'Switch to Manual' : 'Switch to Auto';
+  btnPlayPause.textContent = mode==='auto' ? 'Pause' : 'Play';
 }
-.btn:hover{filter:brightness(1.05)}
-.btn:active{transform:translateY(1px)}
-.btn-outline{border-color:var(--brand2);color:var(--brand2);background:#fff}
-.btn-brand{
-  background:linear-gradient(90deg,var(--brand1),var(--brand2));
-  color:#111
+
+function startReader(initialMode){
+  setMode(initialMode);
+  elCover.classList.add('hidden');
+  elReader.classList.remove('hidden');
+  loadPage(1, { play: initialMode==='auto' });
 }
-.btn.pill{border-radius:999px;padding:8px 14px}
 
-.reader .topbar,.reader .bottombar{
-  display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0
-}
-.left{display:flex;align-items:center;gap:10px}
-.progress{font-weight:700}
+// ===== EVENTS =====
+btnStartAuto.addEventListener('click', ()=> startReader('auto'));
+btnStartManual.addEventListener('click', ()=> startReader('manual'));
 
-.progressbar{height:6px;background:#e9eef6;border-radius:999px;overflow:hidden;margin-bottom:8px}
-.bar{height:100%;width:0;background:linear-gradient(90deg,var(--brand1),var(--brand2))}
+btnNext.addEventListener('click', ()=> nextPage({ play: mode==='auto' }));
+btnPrev.addEventListener('click', ()=> prevPage({ play: mode==='auto' }));
+btnRestart.addEventListener('click', ()=> loadPage(1, { play: mode==='auto' }));
 
-.page-wrap{
-  position:relative;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
-  padding:clamp(8px,1.5vw,14px);display:grid;place-items:center;min-height:min(80vh,80dvh)
-}
-#page-img{
-  width:100%;height:auto;max-width:900px;aspect-ratio:5/4;object-fit:contain;border-radius:10px;background:#fff
-}
-.fade{opacity:0;transition:opacity .28s ease}
-.fade.show{opacity:1}
+btnMode.addEventListener('click', ()=>{
+  const newMode = mode==='auto' ? 'manual' : 'auto';
+  setMode(newMode);
+  if (newMode==='auto') elAudio.play().catch(()=>{});
+  else elAudio.pause();
+});
 
-.nav{
-  position:absolute;top:50%;transform:translateY(-50%);
-  width:clamp(36px,6vw,56px);height:clamp(36px,6vw,56px);
-  border-radius:50%;border:none;cursor:pointer;background:rgba(0,0,0,.06);
-  color:#111;font-size:clamp(20px,4vw,28px);font-weight:700;display:grid;place-items:center
-}
-.nav:hover{background:rgba(0,0,0,.1)}
-.nav.prev{left:8px}.nav.next{right:8px}
+btnMute.addEventListener('click', ()=>{
+  muted = !muted;
+  elAudio.muted = muted;
+  btnMute.textContent = muted ? 'Unmute' : 'Mute';
+});
 
-@media (max-width:520px){.nav{display:none}}
+btnPlayPause.addEventListener('click', ()=>{
+  if (elAudio.paused) { elAudio.play().then(()=> btnPlayPause.textContent='Pause').catch(()=>{}); }
+  else { elAudio.pause(); btnPlayPause.textContent='Play'; }
+});
 
-.hidden{display:none}
+// Auto-advance when narration ends
+elAudio.addEventListener('ended', ()=>{
+  if (mode==='auto') nextPage({ play:true });
+});
+
+// Keyboard nav
+window.addEventListener('keydown', (e)=>{
+  if (elReader.classList.contains('hidden')) return;
+  if (e.key==='ArrowRight') nextPage({ play: mode==='auto' });
+  if (e.key==='ArrowLeft')  prevPage({ play: mode==='auto' });
+});
+
+// Tap to advance + swipe
+elImg.addEventListener('click', ()=> nextPage({ play: mode==='auto' }));
+let touchStartX = 0;
+elImg.addEventListener('touchstart', e=> { touchStartX = e.changedTouches[0].clientX; }, {passive:true});
+elImg.addEventListener('touchend', e=>{
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const THRESH = 50;
+  if (dx > THRESH) prevPage({ play: mode==='auto' });
+  else if (dx < -THRESH) nextPage({ play: mode==='auto' });
+}, {passive:true});
